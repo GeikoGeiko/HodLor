@@ -15,6 +15,10 @@ contract Ownable {
 }
 
 contract Hodl is Ownable{
+    
+//In theory not needed as all cases of over/underflowed are handled
+//but one can never be too safe...
+using SafeMath for uint256;    
 
 //events for game creations etc. for web3 integration
 event GameCreated(uint gameId, uint betSize, address[] players);
@@ -116,17 +120,17 @@ struct Game {
         address player2=games[_gameId].players[1];
         uint localBetSize=games[_gameId].betSize;
         
-        uint lostToPlayer=localBetSize*lostToPlayerPercent/100;
-        uint lostToPool=localBetSize*lostToPoolPercent/100;
+        uint lostToPlayer=(localBetSize.mul(lostToPlayerPercent)).div(100);
+        uint lostToPool=(localBetSize.mul(lostToPoolPercent)).div(100);
         
         // per player, makes sure you get payout from your pool from your own leave so as to not make advantageous to create multiple smaller games and leave them one by one.
-        poolPayout+=lostToPoolPercent*(1 ether)*localBetSize/totalAmount/100;
-        uint wonFromPool=localBetSize*(poolPayout-games[_gameId].poolPayoutOffset)/(1 ether);
+        poolPayout+=(lostToPoolPercent.mul(1 ether)).mul(localBetSize).div(totalAmount).div(100);
+        uint wonFromPool=localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether);
         
-        uint amountToLoser=localBetSize-lostToPlayer-lostToPool+wonFromPool;
-        uint amountToWinner=localBetSize+lostToPlayer+wonFromPool;
+        uint amountToLoser=localBetSize.sub(lostToPlayer).sub(lostToPool).add(wonFromPool);
+        uint amountToWinner=localBetSize.add(lostToPlayer).add(wonFromPool);
   
-        totalAmount-=2*localBetSize;
+        totalAmount==totalAmount.sub(2*localBetSize);
         games[_gameId].gameState=0;      
         
         //msg.sender can only be player1 or player2 (checked by Playing() modifier)
@@ -164,3 +168,32 @@ struct Game {
     
 
 }    
+
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+ 
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+ 
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+ 
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}    
+    
+    
+    
