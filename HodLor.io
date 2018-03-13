@@ -124,8 +124,8 @@ struct Game {
         uint lostToPool=(localBetSize.mul(lostToPoolPercent)).div(100);
         
         // per player, makes sure you get payout from your pool from your own leave so as to not make advantageous to create multiple smaller games and leave them one by one.
-        poolPayout+=(lostToPoolPercent.mul(1 ether)).mul(localBetSize).div(totalAmount).div(100);
-        uint wonFromPool=localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether);
+        poolPayout+=((lostToPoolPercent.mul(localBetSize).mul(1 ether)).div(totalAmount)).div(100);
+        uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether));
         
         uint amountToLoser=localBetSize.sub(lostToPlayer).sub(lostToPool).add(wonFromPool);
         uint amountToWinner=localBetSize.add(lostToPlayer).add(wonFromPool);
