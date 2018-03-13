@@ -1,2 +1,2 @@
 # HodLor
-Public repository for the HodLor project
+Public repository for the Super power HodLor project
