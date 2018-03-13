@@ -31,15 +31,18 @@ event MoneyWithdrew(address _address,uint _amount);
 uint public minBetSize=0.01 ether;
 uint public maxBetSize=10 ether;
 
+//Developper's fee. 1% of betsize (0.05% of total game value)
+uint devCutPercent=1;
+
 // percentages of betsize given by losing player to opponent and to pool 
 uint public lostToPlayerPercent=10;
 uint public lostToPoolPercent=5;
 
 //payout per ether per game
-uint poolPayout=0;
+uint public poolPayout=0;
     
 //total ether in play
-uint totalAmount=0;
+uint public totalAmount=0;
     
 //total winnings stores all of playes' winnings from finished games. withdraw() can be called at any time from user to have their eth sent to their address
 mapping(address=>uint) totalWinnings;
@@ -122,16 +125,20 @@ struct Game {
         
         uint lostToPlayer=(localBetSize.mul(lostToPlayerPercent)).div(100);
         uint lostToPool=(localBetSize.mul(lostToPoolPercent)).div(100);
+        uint lostToDev=(localBetSize.mul(devCutPercent)).div(100);
         
         // per player, makes sure you get payout from your pool from your own leave so as to not make advantageous to create multiple smaller games and leave them one by one.
         poolPayout+=((lostToPoolPercent.mul(localBetSize).mul(1 ether)).div(totalAmount)).div(100);
         uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether));
         
-        uint amountToLoser=localBetSize.sub(lostToPlayer).sub(lostToPool).add(wonFromPool);
-        uint amountToWinner=localBetSize.add(lostToPlayer).add(wonFromPool);
+        uint amountToLoser=localBetSize.sub(lostToPlayer+lostToPool+lostToDev)+wonFromPool;
+        uint amountToWinner=localBetSize+lostToPlayer+wonFromPool;
   
-        totalAmount==totalAmount.sub(2*localBetSize);
-        games[_gameId].gameState=0;      
+        totalAmount=totalAmount.sub(2*localBetSize);
+        games[_gameId].gameState=0;
+        
+        //Pay devCut on owner's account
+        totalWinnings[owner]+=lostToDev;
         
         //msg.sender can only be player1 or player2 (checked by Playing() modifier)
         if(msg.sender==player1){
