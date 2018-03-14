@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charsel="UTF-8">
+	<title>CHILLBROS</title>
+	<meta name="description" content="Chill Bros">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> 
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> 
+	<script src="web3.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="main.css"> 	
+	
+</head>
+
+<body>
+	<div class ="container">
+		<h1>Chillest bro</h1>
+
+		<h2 id="Chillest broÂ²"></h2>
+		<label for "name" class="col-lg-2 control-label">Nom</label>
+		<input id="name" type="text">
+		<button id="button">Update</button>
+
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+	<script>
+		if (typeof web3 !== 'undefined'){
+			web3 = new Web3(web3.currentProvider);
+		}else{
+			web3 = new Web3( new Web3.providers.HttpProvider("http://localhost:8545"));
+		}
+		
+		web3.eth.defaultAccount = web3.eth.accounts[0];
+		var ChillBrosContract = web3.eth.contract([ { "constant": true, "inputs": [], "name": "getChillBro", "outputs": [ { "name": "", "type": "string" } ], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": false, "inputs": [ { "name": "_sName", "type": "string" } ], "name": "setChillBro", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" } ]);
+		var Chillbros = ChillbrosContract.at('0xa76398879b4d0bd8dc891c64210a56e8e4205c66');
+		console.log(ChillBros); 
+
+	</script>
+
+</body>
