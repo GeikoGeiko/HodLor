@@ -42,7 +42,7 @@ uint public lostToPoolPercent=5;
 uint public poolPayout=0;
     
 //total ether in play
-uint public totalAmount=0;
+uint public totalAmount=1;
     
 //totalWinnings stores all of playes' winnings from finished games. withdraw() can be called at any time from user to have their eth sent to their address
 //points stores points players have gained to calculate levels and bonuses etc. Points are etherheld x timeheld ([wei].[days]) 50% bonus for game winner
@@ -130,40 +130,46 @@ struct Game {
         emit GameCanceled(_gameId,games[_gameId].betSize,games[_gameId].players);
     }
     
-    //function called by a player who wishes to leave game. He takes back 84% of betSize + all accumulated payouts since game started. 
-    //Other player takes back 110% of betSize + payouts. 
-    //5%of betSize awarded to all players, included these 2 proportionally to betSize
-    //1% goes to owner (devs)
+    /*function called by a player who wishes to leave game. He takes back 84% of betSize + all accumulated payouts since game started. 
+    Other player takes back 110% of betSize + payouts. 
+    5%of betSize awarded to all players, included these 2 
+    1% goes to owner (devs)*/
     function leaveGame(uint _gameId) public Playing(_gameId){
         address player1=games[_gameId].players[0];
         address player2=games[_gameId].players[1];
         uint localBetSize=games[_gameId].betSize;
         
         uint lostToPlayer=(localBetSize.mul(lostToPlayerPercent)).div(100);
-        uint lostToPool=(localBetSize.mul(lostToPoolPercent)).div(100);
-        uint lostToDev=(localBetSize.mul(devCutPercent)).div(100);
+        uint lostToPoolAndDev=(localBetSize.mul(lostToPoolPercent)).div(100)+(localBetSize.mul(devCutPercent)).div(100);
+
+        /* per player, makes sure you get a fair fraction of what you give to the pool 
+        users should not be incentivized to create multiple small games, or 1 large games
+        i.e. creating and leaving two games with betSize A and B should get you the same payout as
+        creating and leaving a single game with betSize A+B*/
+        uint wonFromOwnPool=((lostToPoolPercent.mul(localBetSize))/100).mul(getShare(1000000000*2*localBetSize/totalAmount))/2/1000000000;
+        uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether))+wonFromOwnPool;
         
-        // per player, makes sure you get payout from your pool from your own leave so as to 
-        //not make advantageous to create multiple smaller games and leave them one by one.
-        poolPayout+=((lostToPoolPercent.mul(localBetSize).mul(1 ether)).div(totalAmount)).div(100);
-        uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether));
-        
-        uint pointsWon=((now.sub(games[_gameId].timeStarted)).mul(games[_gameId].betSize))/3600;
-  
         totalAmount=totalAmount.sub(2*localBetSize);
         games[_gameId].gameState=0;
         
+        poolPayout+=(((lostToPoolPercent.mul(localBetSize).mul(1 ether).div(100)).sub(2*wonFromOwnPool.mul(1 ether))).div(totalAmount));
+
+        
+        uint pointsWon=((now.sub(games[_gameId].timeStarted)).mul(games[_gameId].betSize))/3600;
+  
+
+        
         //Pay devCut on owner's account
-        totalWinnings[owner]+=lostToDev;
+        totalWinnings[owner]+=(localBetSize.mul(devCutPercent)).div(100);
         
         //msg.sender can only be player1 or player2 (checked by Playing() modifier)
         if(msg.sender==player1){
-            totalWinnings[player1]+=localBetSize.sub(lostToPlayer+lostToPool+lostToDev)+wonFromPool;
+            totalWinnings[player1]+=localBetSize.sub(lostToPlayer+lostToPoolAndDev)+wonFromPool;
             totalWinnings[player2]+=localBetSize+lostToPlayer+wonFromPool;
             points[player1]+=pointsWon;
             points[player2]+=(3*pointsWon)/2;
         } else {
-            totalWinnings[player2]+=localBetSize.sub(lostToPlayer+lostToPool+lostToDev)+wonFromPool;
+            totalWinnings[player2]+=localBetSize.sub(lostToPlayer+lostToPoolAndDev)+wonFromPool;
             totalWinnings[player1]+=localBetSize+lostToPlayer+wonFromPool; 
             points[player2]+=pointsWon;
             points[player1]+=(3*pointsWon)/2;
@@ -202,29 +208,70 @@ struct Game {
         revert();
     }
     
+    //Math Functions to calculate payout
+    
+    //proportion of the 5% lost to pool that should go to players whose game just finished
+    //and who have a share of Meps=(10**9)*betSize/totalAmount
+    function getShare(uint _Meps) public pure returns(uint Mshare){
+        if (_Meps==1000000000) { return 1000000000;}
+        else {
+        return(1000000000-(1000000000-_Meps)*getLn(1000000000*1000000000/(1000000000-_Meps))/_Meps);
+        }
+    }
+    
+    //Logarithm implementation with Taylor for ln(1+x). Credits to vitalik
+    //input and output are *(10**9) to work with uints
+    function getLn(uint _input) public pure returns(uint) {
+        require(_input>=1000000000);
+        uint x=_input;
+        uint log=0;
+      
+        while(x>=1500000000){
+            log+=405465108;
+            x=x*2/3;
+        }
+        
+        x-=1000000000;
+        
+        uint y=x;
+        uint i=1;
+        
+        while(i<10){
+            log+=y/i;
+            i+=1;
+            y=y*x/1000000000;
+            log-=y/i;
+            i+=1;
+            y=y*x/1000000000;
+        }
+        
+        return(log);
+        
+    }
+    
 
 }    
 
 library SafeMath {
-  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
     uint256 c = a * b;
     assert(a == 0 || c / a == b);
     return c;
   }
  
-  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
     // assert(b > 0); // Solidity automatically throws when dividing by 0
     uint256 c = a / b;
     // assert(a == b * c + a % b); // There is no case in which this doesn't hold
     return c;
   }
  
-  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
     assert(b <= a);
     return a - b;
   }
  
-  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
     uint256 c = a + b;
     assert(c >= a);
     return c;
