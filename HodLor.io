@@ -12,9 +12,43 @@ contract Ownable {
     require(msg.sender == owner);
     _;
   }
+  
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0));
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
 }
 
-contract Hodl is Ownable{
+contract Pausable is Ownable {
+   
+    event Pause();
+    event Unpause();
+
+    bool public paused = false;
+
+    modifier whenNotPaused() {
+        require(!paused);
+        _;
+    }
+
+    modifier whenPaused() {
+        require(paused);
+        _;
+    }
+
+    function pause() onlyOwner whenNotPaused public {
+        paused = true;
+        emit Pause();
+    }
+
+    function unpause() onlyOwner whenPaused public {
+        paused = false;
+        emit Unpause();
+    }
+}
+
+contract Hodl is Pausable{
     
 //In theory not needed as all cases of over/underflowed are handled
 //but one can never be too safe...
@@ -24,8 +58,10 @@ using SafeMath for uint256;
 event GameCreated(uint gameId, uint betSize, address[] players);
 event GameStarted(uint gameId, uint betSize, address[] players, uint timeStarted);
 event GameCanceled(uint gameId, uint betSize, address[] players);
-event GameFinished(uint gameId, uint betSize, address[] players, uint timeStarted, uint timeFinished,uint poolPayout,uint pointsPayout);
+event GameFinished(uint gameId, uint betSize, address[] players, uint timeStarted, uint timeFinished,uint poolPayout,uint pointsPayout, bool isDraw);
 event MoneyWithdrew(address _address,uint _amount);
+event AskDraw(uint gameId,address player);
+
 
 //Minimum and maximum bet sizes.   
 uint public minBetSize=0.01 ether;
@@ -57,7 +93,7 @@ struct Game {
     // bet size for each player (same)
     uint betSize;
     
-    //gameState=1 if created and waiting for second player.  =2 if game in play =0 if cancelled.
+    //gameState=1 if created and waiting for second player.  =2 if game in play =0 if cancelled or finished
     uint8 gameState;
     
     //Offset to make sure the game gets the right amount of pooled money when closed. poolPayout keeps going up everytime a game is closed. Every new game starts with poolPayoutOffset equal to current poolPayout
@@ -65,6 +101,9 @@ struct Game {
     
     //Stores the time at wich the game started
     uint timeStarted;
+    
+    //Stores if player1 or 2 have asked for a draw
+    bool[] askDraws;
 }
 
     // owner only function to change game variables
@@ -100,9 +139,9 @@ struct Game {
     //Funds do not go to totalWinnings but can be immediatly retrieved by cancelling the game. 
     //Every new game gets a uint id incremented.
     //For public games, input must be address(0), for private games, input is opponent's address 
-    function createGame(address _player2) public payable isValidStartBet(){
+    function createGame(address _player2) public payable isValidStartBet() whenNotPaused(){
         require(msg.sender!=_player2);
-        uint id = games.push(Game(new address[](2),msg.value,1,0,0)) - 1;
+        uint id = games.push(Game(new address[](2),msg.value,1,0,0,new bool[](2))) - 1;
         games[id].players[0] = msg.sender;
         games[id].players[1] = _player2;
         emit GameCreated(id,msg.value,games[id].players);
@@ -110,7 +149,7 @@ struct Game {
     
     //anyone can join a game that is in gamestate=1 if they send the correct amount betSize and player2 is 0x0 or themselves. 
     //Gamecreator can't join his own game.
-    function joinGame(uint _gameId) public payable createdNotStarted(_gameId){
+    function joinGame(uint _gameId) public payable createdNotStarted(_gameId) whenNotPaused(){
         require((msg.sender)!=(games[_gameId].players[0]));
         require(games[_gameId].players[1]==msg.sender||games[_gameId].players[1]==address(0));
         require(msg.value==games[_gameId].betSize);
@@ -176,9 +215,56 @@ struct Game {
         }
         
         
-        emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon);
+        emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,false);
         
         //automatic withdraw for leaving player. Winning player will have to withdraw manually by calling the withdraw function himself.
+        withdraw();
+    }
+    
+    //any player in a started game can ask for a draw
+    function askForDraw(uint _gameId) public Playing(_gameId){
+        if (msg.sender==games[_gameId].players[0]) {games[_gameId].askDraws[0]=true;}
+        else {games[_gameId].askDraws[1]=true;}
+        emit AskDraw(_gameId,msg.sender);
+    }
+    
+    //same function as leaveGame except for lostToPlayer payouts, shared pool and dev payout and points won.
+    function acceptDraw(uint _gameId) public Playing(_gameId){
+        address player1=games[_gameId].players[0];
+        address player2=games[_gameId].players[1];
+        
+        //execute only if other player has requested a draw
+        if(msg.sender==player1) {require(games[_gameId].askDraws[1]);}
+        else {require(games[_gameId].askDraws[0]);}
+        
+        uint localBetSize=games[_gameId].betSize;
+        
+        uint lostToPoolAndDev=(localBetSize.mul(lostToPoolPercent)).div(100)+(localBetSize.mul(devCutPercent)).div(100);
+
+        /* per player, makes sure you get a fair fraction of what you give to the pool 
+        users should not be incentivized to create multiple small games, or 1 large games
+        i.e. creating and leaving two games with betSize A and B should get you the same payout as
+        creating and leaving a single game with betSize A+B*/
+        uint wonFromOwnPool=((lostToPoolPercent.mul(localBetSize))/100).mul(getShare(1000000000*2*localBetSize/totalAmount))/2/1000000000;
+        uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether))+wonFromOwnPool;
+        
+        totalAmount=totalAmount.sub(2*localBetSize);
+        games[_gameId].gameState=0;
+        
+        poolPayout+=(((lostToPoolPercent.mul(localBetSize).mul(1 ether).div(100)).sub(2*wonFromOwnPool.mul(1 ether))).div(totalAmount));
+
+        
+        uint pointsWon=((now.sub(games[_gameId].timeStarted)).mul(games[_gameId].betSize))/3600;
+  
+        totalWinnings[owner]+=(localBetSize.mul(devCutPercent)).div(100);
+        
+        totalWinnings[player1]+=localBetSize.sub(lostToPoolAndDev/2)+wonFromPool;
+        totalWinnings[player2]+=localBetSize.sub(lostToPoolAndDev/2)+wonFromPool;
+        points[player1]+=pointsWon;
+        points[player2]+=pointsWon;
+
+        emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,true);
+        
         withdraw();
     }
     
@@ -194,8 +280,8 @@ struct Game {
     }
     
     //debugging function to check game states
-    function checkState(uint _gameId) external view returns(address[],uint,uint8,uint,uint){
-        return(games[_gameId].players,games[_gameId].betSize,games[_gameId].gameState,games[_gameId].poolPayoutOffset,games[_gameId].timeStarted);
+    function checkState(uint _gameId) external view returns(address[],uint,uint8,uint,uint,bool[]){
+        return(games[_gameId].players,games[_gameId].betSize,games[_gameId].gameState,games[_gameId].poolPayoutOffset,games[_gameId].timeStarted,games[_gameId].askDraws);
         }
     
     //GUI functions
