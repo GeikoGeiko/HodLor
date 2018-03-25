@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>HodLor</title>
+
+    <link rel="stylesheet" type="text/css" href="main.css">
+
+    <script src="./node_modules/web3/dist/web3.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+
+        <h1>HodLor Game</h1>
+        <h2 id="nbOfGames"></h2>
+        <h2 id="game"></h2>
+
+        <label for="betsize">Bet Size</label>
+        <input id="betsize" type="text">
+
+        <button id="buttonCreate">Create Game</button>
+        <button id="buttonCancel">Cancel Game</button>
+
+
+    </div>
+
+	<table id="listGames">
+		<tr>
+			<th>First player</th>
+			<th>Second player</th>
+			<th>Bet Size</th>
+			<th>Game Status</th>
+			<th>Actions</th>
+		</tr>	
+	</table>
+	</table>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+
+    <script>
+          if (typeof web3 !== 'undefined') {
+            web3 = new Web3(web3.currentProvider);
+        } else {
+            // set the provider you want from Web3.providers
+            web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        }
+
+        web3.eth.defaultAccount = web3.eth.accounts[0];
+
+        var HodlorContract = web3.eth.contract([
+		
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "acceptDraw",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [],
+		"name": "Unpause",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [],
+		"name": "Pause",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "player",
+				"type": "address"
+			}
+		],
+		"name": "AskDraw",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "_address",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "_amount",
+				"type": "uint256"
+			}
+		],
+		"name": "MoneyWithdrew",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "betSize",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "players",
+				"type": "address[]"
+			},
+			{
+				"indexed": false,
+				"name": "timeStarted",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "timeFinished",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "poolPayout",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "pointsPayout",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "isDraw",
+				"type": "bool"
+			}
+		],
+		"name": "GameFinished",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "betSize",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "players",
+				"type": "address[]"
+			}
+		],
+		"name": "GameCanceled",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "betSize",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "players",
+				"type": "address[]"
+			},
+			{
+				"indexed": false,
+				"name": "timeStarted",
+				"type": "uint256"
+			}
+		],
+		"name": "GameStarted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "gameId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "betSize",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "players",
+				"type": "address[]"
+			}
+		],
+		"name": "GameCreated",
+		"type": "event"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "askForDraw",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "cancelGame",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_player2",
+				"type": "address"
+			}
+		],
+		"name": "createGame",
+		"outputs": [],
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "joinGame",
+		"outputs": [],
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "leaveGame",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_minBetSize",
+				"type": "uint256"
+			},
+			{
+				"name": "_maxBetSize",
+				"type": "uint256"
+			},
+			{
+				"name": "_lostToPlayerPercent",
+				"type": "uint256"
+			},
+			{
+				"name": "_lostToPoolPercent",
+				"type": "uint256"
+			}
+		],
+		"name": "modifyVars",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"payable": true,
+		"stateMutability": "payable",
+		"type": "fallback"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_gameId",
+				"type": "uint256"
+			}
+		],
+		"name": "checkState",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address[]"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "uint8"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"name": "",
+				"type": "bool[]"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "games",
+		"outputs": [
+			{
+				"name": "betSize",
+				"type": "uint256"
+			},
+			{
+				"name": "gameState",
+				"type": "uint8"
+			},
+			{
+				"name": "poolPayoutOffset",
+				"type": "uint256"
+			},
+			{
+				"name": "timeStarted",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_input",
+				"type": "uint256"
+			}
+		],
+		"name": "getLn",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_Meps",
+				"type": "uint256"
+			}
+		],
+		"name": "getShare",
+		"outputs": [
+			{
+				"name": "Mshare",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "lostToPlayerPercent",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "lostToPoolPercent",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "maxBetSize",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "minBetSize",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "paused",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "points",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "poolPayout",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "totalAmount",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "totalNumberOfGames",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "totalWinnings",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+);
+
+        var Hodlor = HodlorContract.at('0x6fe14138a3e9244d50fa79de7a30bb68beffc931');
+        console.log(Hodlor);
+
+
+
+		var nbOfGamesJS=Hodlor.totalNumberOfGames();
+		console.log(nbOfGamesJS);
+
+		var tbl=document.getElementById("listGames");
+		
+		for (var i = 0; i < nbOfGamesJS; i++) {
+
+			gameState=Hodlor.checkState(i);
+			console.log(gameState);
+			var tr = document.createElement("tr");
+			tr.id="TRgame"+i;
+
+			var td = document.createElement("td");
+			td.id="TDplayer1Game"+i;
+			var txt = document.createTextNode(gameState[0][0]);
+			console.log(txt);
+			td.appendChild(txt);
+			tr.appendChild(td);
+
+
+			var td = document.createElement("td");
+			td.id="TDplayer2Game"+i;
+			var txt = document.createTextNode(gameState[0][1]);
+			console.log(txt);
+			td.appendChild(txt);
+			tr.appendChild(td);
+			
+
+			var td = document.createElement("td");
+			td.id="TDbetSizeGame"+i;
+			var txt = document.createTextNode(gameState[1]/10**18);
+			console.log(txt);
+			td.appendChild(txt);
+			tr.appendChild(td);
+						
+
+			var td = document.createElement("td");
+			td.id="TDgameStateGame"+i;
+			if(gameState[2]==0){td.innerHTML="Game Cancelled";}
+			if(gameState[2]==1){td.innerHTML="Waiting for second player";}
+			if(gameState[2]==2){td.innerHTML="Game in progress";}
+			if(gameState[2]==3){td.innerHTML="Game Finished";}
+			tr.appendChild(td);
+
+
+			var td = document.createElement("td");
+			td.id="TDactionsGame"+i;
+				var btn = document.createElement('input');
+				btn.id="BtnjoinGame"+i;
+				btn.type = "button";
+				btn.value = "Join Game";
+				btn.class="joinBtn";
+				btn.dataset.betSize=gameState[1];
+				btn.dataset.id=i;
+				btn.onclick=function(){Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 2100000} )}
+				btn.style.visibility = "hidden";
+				if(gameState[2]==1&&web3.eth.defaultAccount!=gameState[0][0]){btn.style.visibility = "visible";}
+				td.appendChild(btn);
+
+				var btn = document.createElement('input');
+				btn.id="BtnleaveGame"+i;
+				btn.type = "button";
+				btn.class="leavebtn";
+				btn.dataset.id=i;
+				btn.style.visibility = "hidden";
+				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){
+					console.log(gameState[5][0]);
+					btn.value = "Accept Draw";
+					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id)}
+				} else {
+					btn.value = "Leave Game";
+					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id)}
+				}
+				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
+				td.appendChild(btn);
+
+				var btn = document.createElement('input');
+				btn.id="BtnaskDraw"+i;
+				btn.type = "button";
+				btn.class="askDrawBtn";
+				btn.dataset.id=i;
+				btn.style.visibility = "hidden";
+				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){
+					console.log(gameState[5][0]);
+					btn.value = "Accept Draw";
+					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id)}
+				} else {
+					btn.value = "Leave Game";
+					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id)}
+				}
+				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
+				td.appendChild(btn);
+
+			tr.appendChild(td);
+			
+			tbl.appendChild(tr);
+		}
+		
+
+		//function joingame(){console.log(this.dataset.betSize);console.log(this.dataset.id);Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 2100000} );}
+
+
+
+
+		document.getElementById("TDplayer1Game0").style.color="red";
+
+        Hodlor.checkState(0,function(error, result){
+            if(!error)
+                {
+                    $("#game").html('First Player : '+result[0][0]+' (Bet size ='+result[1]+' )');
+                    console.log(result);
+                }
+            else
+                console.error(error);
+        });
+
+        $("#buttonCreate").click(function() {
+            Hodlor.createGame("0x0",{value: web3.toWei(2, 'ether'),gas: 2100000} );
+            console.log(Hodlor);
+        });
+
+        $("#buttonCancel").click(function() {
+            Hodlor.cancelGame(0);
+            console.log(Hodlor);
+        });
+
+    </script>
+
+</body>
+</html>
