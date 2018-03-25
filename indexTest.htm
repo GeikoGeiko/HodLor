@@ -17,12 +17,13 @@
 	
 	<h3 id="playerAddress"></h3>
 	<h3 id="playerBalance"></h3>
-
+	<h3 id="playerWithdraw"></h3>
+	<input id="buttonWithdraw" value="Withdraw" type="button">
+	<h3 id="playerPoints"></h3>
 
     <label for="betsize">Bet Size</label>
     <input id="betsize" type="text">
-
-    <button id="buttonCreate">Create Game</button>
+    <input id="buttonCreate" value="Create Game" type="button">
 
 
 
@@ -30,642 +31,18 @@
 
 	<table id="listGames">
 		<tr>
-			<th>First player</th>
-			<th>Second player</th>
+			<th>Players</th>
 			<th>Bet Size</th>
+			<th>Dividends per player</th>
 			<th>Game Status</th>
 			<th>Actions</th>
 		</tr>	
 	</table>
 	</table>
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-
+   <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+   <script src="contract.js"></script>
     <script>
-          if (typeof web3 !== 'undefined') {
-            web3 = new Web3(web3.currentProvider);
-        } else {
-            // set the provider you want from Web3.providers
-            web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-        }
-
-        web3.eth.defaultAccount = web3.eth.accounts[0];
-
-        var HodlorContract = web3.eth.contract([
-		
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "acceptDraw",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [],
-		"name": "Unpause",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [],
-		"name": "Pause",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "player",
-				"type": "address"
-			}
-		],
-		"name": "AskDraw",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "_address",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"name": "_amount",
-				"type": "uint256"
-			}
-		],
-		"name": "MoneyWithdrew",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "betSize",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "players",
-				"type": "address[]"
-			},
-			{
-				"indexed": false,
-				"name": "timeStarted",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "timeFinished",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "poolPayout",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "pointsPayout",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "isDraw",
-				"type": "bool"
-			}
-		],
-		"name": "GameFinished",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "betSize",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "players",
-				"type": "address[]"
-			}
-		],
-		"name": "GameCanceled",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "betSize",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "players",
-				"type": "address[]"
-			},
-			{
-				"indexed": false,
-				"name": "timeStarted",
-				"type": "uint256"
-			}
-		],
-		"name": "GameStarted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"name": "gameId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "betSize",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "players",
-				"type": "address[]"
-			}
-		],
-		"name": "GameCreated",
-		"type": "event"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "askForDraw",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "cancelGame",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_player2",
-				"type": "address"
-			}
-		],
-		"name": "createGame",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "joinGame",
-		"outputs": [],
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "leaveGame",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_minBetSize",
-				"type": "uint256"
-			},
-			{
-				"name": "_maxBetSize",
-				"type": "uint256"
-			},
-			{
-				"name": "_lostToPlayerPercent",
-				"type": "uint256"
-			},
-			{
-				"name": "_lostToPoolPercent",
-				"type": "uint256"
-			}
-		],
-		"name": "modifyVars",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [],
-		"name": "pause",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"payable": true,
-		"stateMutability": "payable",
-		"type": "fallback"
-	},
-	{
-		"constant": false,
-		"inputs": [],
-		"name": "unpause",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [],
-		"name": "withdraw",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "_gameId",
-				"type": "uint256"
-			}
-		],
-		"name": "checkState",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address[]"
-			},
-			{
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"name": "",
-				"type": "uint8"
-			},
-			{
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"name": "",
-				"type": "bool[]"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "games",
-		"outputs": [
-			{
-				"name": "betSize",
-				"type": "uint256"
-			},
-			{
-				"name": "gameState",
-				"type": "uint8"
-			},
-			{
-				"name": "poolPayoutOffset",
-				"type": "uint256"
-			},
-			{
-				"name": "timeStarted",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "_input",
-				"type": "uint256"
-			}
-		],
-		"name": "getLn",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "_Meps",
-				"type": "uint256"
-			}
-		],
-		"name": "getShare",
-		"outputs": [
-			{
-				"name": "Mshare",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "lostToPlayerPercent",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "lostToPoolPercent",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "maxBetSize",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "minBetSize",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "paused",
-		"outputs": [
-			{
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "points",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "poolPayout",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "totalAmount",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "totalNumberOfGames",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "totalWinnings",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	}
-]
-);
-
-        var Hodlor = HodlorContract.at('0x6fe14138a3e9244d50fa79de7a30bb68beffc931');
-        console.log(Hodlor);
+   
 
 
 
@@ -674,16 +51,14 @@
 
 		var tbl=document.getElementById("listGames");
 		
-		for (var i = 0; i < nbOfGamesJS; i++) {
-
+		function updateGame(i){return function(){
 			gameState=Hodlor.checkState(i);
-			console.log(gameState);
 			var isPlayer1=(web3.eth.defaultAccount==gameState[0][0]);
 			var isPlayer2=(web3.eth.defaultAccount==gameState[0][1]);
 			var isPlaying=isPlayer1||isPlayer2;
-			var tr = document.createElement("tr");
+			var tr=document.createElement("tr");	
 			tr.id="TRgame"+i;
-			
+				 
 			if(isPlaying&&gameState[2]==0){tr.class="isPartCancelled"}
 			if(isPlaying&&gameState[2]==1){tr.class="isPartWaiting"}
 			if(isPlaying&&gameState[2]==2){tr.class="isPartPlaying"}
@@ -692,29 +67,33 @@
 			if(!isPlaying&&gameState[2]==1){tr.class="isNotPartWaiting"}
 			if(!isPlaying&&gameState[2]==2){tr.class="isNotPartPlaying"}
 			if(!isPlaying&&gameState[2]==3){tr.class="isNotPartFinished"}
-
+		 
 			//Player 1
+		 
 			var td = document.createElement("td");
 			td.id="TDplayer1Game"+i;
-			var txt = document.createTextNode(gameState[0][0]);
-			console.log(txt);
-			td.appendChild(txt);
+			td.innerHTML=gameState[0][0]+"<br>"+gameState[0][1];
 			tr.appendChild(td);
-
+		 
 			//Player 2	
-			var td = document.createElement("td");
-			td.id="TDplayer2Game"+i;
-			var txt = document.createTextNode(gameState[0][1]);
-			console.log(txt);
-			td.appendChild(txt);
-			tr.appendChild(td);
+			//var td = document.createElement("td");
+			//td.id="TDplayer2Game"+i;
+			//var txt = document.createTextNode(gameState[0][1]);
+			//td.appendChild(txt);
+			//tr.appendChild(td);
 			
 			//BetSize
 			var td = document.createElement("td");
 			td.id="TDbetSizeGame"+i;
 			var txt = document.createTextNode(gameState[1]/10**18);
-			console.log(txt);
 			td.appendChild(txt);
+			tr.appendChild(td);
+
+			//Dividens per player
+			var td = document.createElement("td");
+			td.id="TDdivsPerPlayerGame"+i;
+			var txt = document.createTextNode((Hodlor.poolPayout()-gameState[3])*gameState[1]/10**36);
+			if(gameState[2]==2){td.appendChild(txt);}
 			tr.appendChild(td);
 						
 			//GameState
@@ -730,65 +109,96 @@
 			var td = document.createElement("td");
 			td.id="TDactionsGame"+i;
 				var btn = document.createElement('input');
+				btn.id="BtncancelGame"+i;
+				btn.type = "button";
+				btn.value = "Cancel Game";
+				btn.dataset.id=i;
+				btn.onclick=function(){Hodlor.cancelGame(this.dataset.id )}
+				btn.style.display="none";
+				if(gameState[2]==1&&web3.eth.defaultAccount==gameState[0][0]){btn.style.display="block";}
+				td.appendChild(btn);
+				
+				var btn = document.createElement('input');
 				btn.id="BtnjoinGame"+i;
 				btn.type = "button";
 				btn.value = "Join Game";
 				btn.dataset.betSize=gameState[1];
 				btn.dataset.id=i;
 				btn.onclick=function(){Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 210000} )}
-				btn.style.visibility = "hidden";
-				if(gameState[2]==1&&web3.eth.defaultAccount!=gameState[0][0]){btn.style.visibility = "visible";}
+				btn.style.display = "none";
+				if(gameState[2]==1&&web3.eth.defaultAccount!=gameState[0][0]){btn.style.display = "block";}
 				td.appendChild(btn);
 
 				var btn = document.createElement('input');
 				btn.id="BtnleaveGame"+i;
 				btn.type = "button";
 				btn.dataset.id=i;
-				btn.style.visibility = "hidden";
+				btn.style.display = "none";
 				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){
-					console.log(gameState[5][0]);
 					btn.value = "Accept Draw";
 					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id,{gas: 210000})}
 				} else {
 					btn.value = "Leave Game";
 					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id,{gas: 210000})}
 				}
-				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
+				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.display = "block";}
 				td.appendChild(btn);
 
 				var btn = document.createElement('input');
 				btn.id="BtnaskDraw"+i;
 				btn.type = "button";
 				btn.dataset.id=i;
-				btn.style.visibility = "hidden";
+				btn.style.display = "none";
 				btn.value = "Ask for Draw";
 				btn.onclick=function(){Hodlor.askForDraw(this.dataset.id,{gas: 210000})}
-				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
+				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.display = "block";}
 				if((gameState[5][0]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][1]&&gameState[0][1]==web3.eth.defaultAccount)){
 					btn.disabled=true;
 					btn.value = "Draw asked";
 				}
-				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){btn.style.visibility = "hidden";}
+				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){btn.style.display = "block";}
 				
 				
 				td.appendChild(btn);
 
 			tr.appendChild(td);
-			
-			tbl.appendChild(tr);
+			return tr;
+		}
 		}
 		
-		$("#buttonCreate").click(function() {
-			console.log(document.getElementById("betsize").value);
-            Hodlor.createGame("0x0",{value: web3.toWei(document.getElementById("betsize").value, 'ether'),gas: 2100000} );
-            
-        });
+		function addNewGame(i){ return function() {
+			var element =  document.getElementById("TRgame"+i);
+			if (typeof(element) == 'undefined' || element == null) {
+  				var tr = updateGame(i)();
+				tbl.appendChild(tr);
+			}
+		}}
+		
+		for (var i = 0; i < nbOfGamesJS; i++) {addNewGame(i)();}
+	
+		var gameCreatedEvent=Hodlor.GameCreated();
+		var gameUpdatedEvent=Hodlor.GameUpdated();
+		gameCreatedEvent.watch(function(error, result){if (!error) {generalInformation();addNewGame(result.args.gameId)();} else { console.log(error); }});
+		gameUpdatedEvent.watch(function(error, result){if (!error) {generalInformation();$("tr#TRgame"+result.args.gameId).replaceWith(updateGame(result.args.gameId)());} else { console.log(error); }});
 
-		document.getElementById("nbOfGames").innerHTML="Total number of games played: "+Hodlor.totalNumberOfGames();
-		document.getElementById("playerAddress").innerHTML="Your ETH address: "+web3.eth.defaultAccount;
-		document.getElementById("playerBalance").innerHTML="Your ETH balance: "+web3.eth.getBalance(web3.eth.defaultAccount)/10**18;
+		
 
+		document.getElementById("buttonCreate").onclick=function() { Hodlor.createGame("0x0",{value: web3.toWei(document.getElementById("betsize").value, 'ether'),gas: 400000} ); };
+		document.getElementById("buttonWithdraw").onclick=function() { Hodlor.withdraw({gas: 400000} ); };
+
+		function generalInformation(){
+			document.getElementById("nbOfGames").innerHTML="Total number of games played: "+Hodlor.totalNumberOfGames();
+			document.getElementById("playerAddress").innerHTML="Your ETH address: "+web3.eth.defaultAccount;
+			document.getElementById("playerBalance").innerHTML="Your ETH balance: "+web3.eth.getBalance(web3.eth.defaultAccount)/10**18;
+			document.getElementById("playerWithdraw").innerHTML="ETH available for withdrawal: "+Hodlor.totalWinnings(web3.eth.defaultAccount)/10**18;
+			document.getElementById("playerPoints").innerHTML="Total points: "+Hodlor.points(web3.eth.defaultAccount)/10**18;
+		}
+		generalInformation();
+
+
+				//gameCreatedEvent.watch(function(error, result){if (!error) { document.getElementById("testEvent").innerHTML="Testing This";} else { console.log(error); }});
     </script>
 
 </body>
 </html>
+
