@@ -55,12 +55,14 @@ contract Hodl is Pausable{
 using SafeMath for uint256;    
 
 //events for game creations etc. for web3 integration
-event GameCreated(uint gameId, uint betSize, address[] players);
-event GameStarted(uint gameId, uint betSize, address[] players, uint timeStarted);
+event GameCreated(uint gameId);
+/*event GameStarted(uint gameId, uint betSize, address[] players, uint timeStarted);
 event GameCanceled(uint gameId, uint betSize, address[] players);
 event GameFinished(uint gameId, uint betSize, address[] players, uint timeStarted, uint timeFinished,uint poolPayout,uint pointsPayout, bool isDraw);
 event MoneyWithdrew(address _address,uint _amount);
-event AskDraw(uint gameId,address player);
+event AskDraw(uint gameId,address player);*/
+event GameUpdated(uint gameId);
+event MoneyWithdrew(address _address,uint _amount);
 
 
 //Minimum and maximum bet sizes.   
@@ -144,7 +146,7 @@ struct Game {
         uint id = games.push(Game(new address[](2),msg.value,1,0,0,new bool[](2))) - 1;
         games[id].players[0] = msg.sender;
         games[id].players[1] = _player2;
-        emit GameCreated(id,msg.value,games[id].players);
+        emit GameCreated(id);
     }
     
     //anyone can join a game that is in gamestate=1 if they send the correct amount betSize and player2 is 0x0 or themselves. 
@@ -158,7 +160,8 @@ struct Game {
         games[_gameId].poolPayoutOffset=poolPayout;
         games[_gameId].gameState=2;
         games[_gameId].timeStarted=now;
-        emit GameStarted(_gameId,games[_gameId].betSize,games[_gameId].players,games[_gameId].timeStarted);
+        //emit GameStarted(_gameId,games[_gameId].betSize,games[_gameId].players,games[_gameId].timeStarted);
+        emit GameUpdated(_gameId);
     }
     
     //cancelGame first sets gameState to 0 if caller is game creator to prevent reentry. Then refunds betSize. 
@@ -166,7 +169,8 @@ struct Game {
         require( games[_gameId].players[0] == msg.sender);
         games[_gameId].gameState=0;
         msg.sender.transfer(games[_gameId].betSize);
-        emit GameCanceled(_gameId,games[_gameId].betSize,games[_gameId].players);
+        //emit GameCanceled(_gameId,games[_gameId].betSize,games[_gameId].players);
+        emit GameUpdated(_gameId);
     }
     
     /*function called by a player who wishes to leave game. He takes back 84% of betSize + all accumulated payouts since game started. 
@@ -189,7 +193,7 @@ struct Game {
         uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether))+wonFromOwnPool;
         
         totalAmount=totalAmount.sub(2*localBetSize);
-        games[_gameId].gameState=0;
+        games[_gameId].gameState=3;
         
         poolPayout+=(((lostToPoolPercent.mul(localBetSize).mul(1 ether).div(100)).sub(2*wonFromOwnPool.mul(1 ether))).div(totalAmount));
 
@@ -215,7 +219,8 @@ struct Game {
         }
         
         
-        emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,false);
+        //emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,false);
+        emit GameUpdated(_gameId);
         
         //automatic withdraw for leaving player. Winning player will have to withdraw manually by calling the withdraw function himself.
         withdraw();
@@ -225,7 +230,8 @@ struct Game {
     function askForDraw(uint _gameId) public Playing(_gameId){
         if (msg.sender==games[_gameId].players[0]) {games[_gameId].askDraws[0]=true;}
         else {games[_gameId].askDraws[1]=true;}
-        emit AskDraw(_gameId,msg.sender);
+        //emit AskDraw(_gameId,msg.sender);
+        emit GameUpdated(_gameId);
     }
     
     //same function as leaveGame except for lostToPlayer payouts, shared pool and dev payout and points won.
@@ -249,7 +255,7 @@ struct Game {
         uint wonFromPool=(localBetSize.mul(poolPayout.sub(games[_gameId].poolPayoutOffset)).div(1 ether))+wonFromOwnPool;
         
         totalAmount=totalAmount.sub(2*localBetSize);
-        games[_gameId].gameState=0;
+        games[_gameId].gameState=3;
         
         poolPayout+=(((lostToPoolPercent.mul(localBetSize).mul(1 ether).div(100)).sub(2*wonFromOwnPool.mul(1 ether))).div(totalAmount));
 
@@ -263,7 +269,8 @@ struct Game {
         points[player1]+=pointsWon;
         points[player2]+=pointsWon;
 
-        emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,true);
+        //emit GameFinished(_gameId,localBetSize,games[_gameId].players,games[_gameId].timeStarted,now,wonFromPool,pointsWon,true);
+        emit GameUpdated(_gameId);
         
         withdraw();
     }
