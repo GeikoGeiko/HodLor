@@ -12,20 +12,21 @@
 
 </head>
 <body>
-    <div class="container">
-
-        <h1>HodLor Game</h1>
-        <h2 id="nbOfGames"></h2>
-        <h2 id="game"></h2>
-
-        <label for="betsize">Bet Size</label>
-        <input id="betsize" type="text">
-
-        <button id="buttonCreate">Create Game</button>
-        <button id="buttonCancel">Cancel Game</button>
+    <h1>HodLor Game</h1>
+	<h3 id="nbOfGames"></h3>
+	
+	<h3 id="playerAddress"></h3>
+	<h3 id="playerBalance"></h3>
 
 
-    </div>
+    <label for="betsize">Bet Size</label>
+    <input id="betsize" type="text">
+
+    <button id="buttonCreate">Create Game</button>
+
+
+
+
 
 	<table id="listGames">
 		<tr>
@@ -677,9 +678,22 @@
 
 			gameState=Hodlor.checkState(i);
 			console.log(gameState);
+			var isPlayer1=(web3.eth.defaultAccount==gameState[0][0]);
+			var isPlayer2=(web3.eth.defaultAccount==gameState[0][1]);
+			var isPlaying=isPlayer1||isPlayer2;
 			var tr = document.createElement("tr");
 			tr.id="TRgame"+i;
+			
+			if(isPlaying&&gameState[2]==0){tr.class="isPartCancelled"}
+			if(isPlaying&&gameState[2]==1){tr.class="isPartWaiting"}
+			if(isPlaying&&gameState[2]==2){tr.class="isPartPlaying"}
+			if(isPlaying&&gameState[2]==3){tr.class="isPartFinished"}
+			if(!isPlaying&&gameState[2]==0){tr.class="isNotPartCancelled"}
+			if(!isPlaying&&gameState[2]==1){tr.class="isNotPartWaiting"}
+			if(!isPlaying&&gameState[2]==2){tr.class="isNotPartPlaying"}
+			if(!isPlaying&&gameState[2]==3){tr.class="isNotPartFinished"}
 
+			//Player 1
 			var td = document.createElement("td");
 			td.id="TDplayer1Game"+i;
 			var txt = document.createTextNode(gameState[0][0]);
@@ -687,7 +701,7 @@
 			td.appendChild(txt);
 			tr.appendChild(td);
 
-
+			//Player 2	
 			var td = document.createElement("td");
 			td.id="TDplayer2Game"+i;
 			var txt = document.createTextNode(gameState[0][1]);
@@ -695,7 +709,7 @@
 			td.appendChild(txt);
 			tr.appendChild(td);
 			
-
+			//BetSize
 			var td = document.createElement("td");
 			td.id="TDbetSizeGame"+i;
 			var txt = document.createTextNode(gameState[1]/10**18);
@@ -703,7 +717,7 @@
 			td.appendChild(txt);
 			tr.appendChild(td);
 						
-
+			//GameState
 			var td = document.createElement("td");
 			td.id="TDgameStateGame"+i;
 			if(gameState[2]==0){td.innerHTML="Game Cancelled";}
@@ -712,17 +726,16 @@
 			if(gameState[2]==3){td.innerHTML="Game Finished";}
 			tr.appendChild(td);
 
-
+			//Buttons	
 			var td = document.createElement("td");
 			td.id="TDactionsGame"+i;
 				var btn = document.createElement('input');
 				btn.id="BtnjoinGame"+i;
 				btn.type = "button";
 				btn.value = "Join Game";
-				btn.class="joinBtn";
 				btn.dataset.betSize=gameState[1];
 				btn.dataset.id=i;
-				btn.onclick=function(){Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 2100000} )}
+				btn.onclick=function(){Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 210000} )}
 				btn.style.visibility = "hidden";
 				if(gameState[2]==1&&web3.eth.defaultAccount!=gameState[0][0]){btn.style.visibility = "visible";}
 				td.appendChild(btn);
@@ -730,16 +743,15 @@
 				var btn = document.createElement('input');
 				btn.id="BtnleaveGame"+i;
 				btn.type = "button";
-				btn.class="leavebtn";
 				btn.dataset.id=i;
 				btn.style.visibility = "hidden";
 				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){
 					console.log(gameState[5][0]);
 					btn.value = "Accept Draw";
-					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id)}
+					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id,{gas: 210000})}
 				} else {
 					btn.value = "Leave Game";
-					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id)}
+					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id,{gas: 210000})}
 				}
 				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
 				td.appendChild(btn);
@@ -747,18 +759,18 @@
 				var btn = document.createElement('input');
 				btn.id="BtnaskDraw"+i;
 				btn.type = "button";
-				btn.class="askDrawBtn";
 				btn.dataset.id=i;
 				btn.style.visibility = "hidden";
-				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){
-					console.log(gameState[5][0]);
-					btn.value = "Accept Draw";
-					btn.onclick=function(){Hodlor.acceptDraw(this.dataset.id)}
-				} else {
-					btn.value = "Leave Game";
-					btn.onclick=function(){Hodlor.leaveGame(this.dataset.id)}
-				}
+				btn.value = "Ask for Draw";
+				btn.onclick=function(){Hodlor.askForDraw(this.dataset.id,{gas: 210000})}
 				if(gameState[2]==2&&(web3.eth.defaultAccount==gameState[0][0]||web3.eth.defaultAccount==gameState[0][1])){btn.style.visibility = "visible";}
+				if((gameState[5][0]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][1]&&gameState[0][1]==web3.eth.defaultAccount)){
+					btn.disabled=true;
+					btn.value = "Draw asked";
+				}
+				if((gameState[5][1]&&gameState[0][0]==web3.eth.defaultAccount)||(gameState[5][0]&&gameState[0][1]==web3.eth.defaultAccount)){btn.style.visibility = "hidden";}
+				
+				
 				td.appendChild(btn);
 
 			tr.appendChild(td);
@@ -766,33 +778,15 @@
 			tbl.appendChild(tr);
 		}
 		
-
-		//function joingame(){console.log(this.dataset.betSize);console.log(this.dataset.id);Hodlor.joinGame(this.dataset.id,{value: this.dataset.betSize,gas: 2100000} );}
-
-
-
-
-		document.getElementById("TDplayer1Game0").style.color="red";
-
-        Hodlor.checkState(0,function(error, result){
-            if(!error)
-                {
-                    $("#game").html('First Player : '+result[0][0]+' (Bet size ='+result[1]+' )');
-                    console.log(result);
-                }
-            else
-                console.error(error);
+		$("#buttonCreate").click(function() {
+			console.log(document.getElementById("betsize").value);
+            Hodlor.createGame("0x0",{value: web3.toWei(document.getElementById("betsize").value, 'ether'),gas: 2100000} );
+            
         });
 
-        $("#buttonCreate").click(function() {
-            Hodlor.createGame("0x0",{value: web3.toWei(2, 'ether'),gas: 2100000} );
-            console.log(Hodlor);
-        });
-
-        $("#buttonCancel").click(function() {
-            Hodlor.cancelGame(0);
-            console.log(Hodlor);
-        });
+		document.getElementById("nbOfGames").innerHTML="Total number of games played: "+Hodlor.totalNumberOfGames();
+		document.getElementById("playerAddress").innerHTML="Your ETH address: "+web3.eth.defaultAccount;
+		document.getElementById("playerBalance").innerHTML="Your ETH balance: "+web3.eth.getBalance(web3.eth.defaultAccount)/10**18;
 
     </script>
 
